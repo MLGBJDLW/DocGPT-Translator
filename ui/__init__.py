@@ -1,1 +1,1 @@
-from .translator_gui import TranslatorApp
+from .main_window import TranslatorApp
