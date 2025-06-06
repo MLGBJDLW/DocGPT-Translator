@@ -2,9 +2,12 @@ import tkinter as tk
 import time
 import threading
 from openai import OpenAI
-from core.ocr_handler import capture_and_ocr_translate_fixed
+from core.ocr_handler import reader
 import customtkinter as ctk
 from tkinter import messagebox
+from PIL import Image, ImageOps
+import numpy as np
+import mss
 
 def build_floating_ocr_tab(app):
     app.float_ocr_btn = ctk.CTkButton(app.tab_float, text="🧊 Launch Floating Translate Box", command=lambda: launch_floating_ocr(app))
@@ -19,7 +22,6 @@ def launch_floating_ocr(app):
     app.float_win = tk.Toplevel(app)
     app.float_win.title("Floating OCR")
     app.float_win.geometry("400x200+300+300")
-    # app.float_win.overrideredirect(True)
     app.float_win.attributes("-topmost", True)
     app.float_win.configure(bg="#222222")
 
@@ -27,17 +29,16 @@ def launch_floating_ocr(app):
     app.float_paused = False
     app.float_ocr_active = True
 
-    # Create a transparent background for the floating window
     container = tk.Frame(app.float_win, bg="#222222")
     container.pack(expand=True, fill="both")
 
     app.float_text = tk.Text(container, wrap="word", font=("Arial", 10),
                               bg="#222222", fg="#00FF99", insertbackground="#00FF99", relief="flat")
     app.float_text.pack(expand=True, fill="both", padx=10, pady=(10, 5))
-    app.float_text.focus_set()  # Set focus to the text widget
+    app.float_text.focus_set()
 
     close_button = tk.Button(
-        container, 
+        container,
         text="❌ Close",
         command=lambda: close_floating_ocr(app),
         bg="#444444",
@@ -69,30 +70,57 @@ def end_drag(app, event):
     app.float_dragging = False
     app.float_paused = False
 
+def grab_region(region):
+    with mss.mss() as sct:
+        monitor = {
+            "top": region[1],
+            "left": region[0],
+            "width": region[2] - region[0],
+            "height": region[3] - region[1]
+        }
+        sct_img = sct.grab(monitor)
+        return Image.frombytes("RGB", sct_img.size, sct_img.rgb)
+
+def enhance_image(img):
+    gray = img.convert("L")
+    inverted = ImageOps.invert(gray)
+    enhanced = ImageOps.autocontrast(inverted)
+    return enhanced
+
 def run_floating_ocr_loop(app):
     while getattr(app, "float_ocr_active", False):
         if not getattr(app, "float_paused", False):
             try:
                 if not (hasattr(app, "float_win") and app.float_win.winfo_exists()):
-                    break  # if the window is closed, exit the loop
+                    break
 
                 x = app.float_win.winfo_rootx()
                 y = app.float_win.winfo_rooty()
                 w = app.float_win.winfo_width()
                 h = app.float_win.winfo_height()
-                region = (x, y, w, h)
-                result = capture_and_ocr_translate_fixed(app.client, region)
+                region = (x, y, x + w, y + int(h * 0.85))
+
+                screenshot = grab_region(region)
+                if screenshot is None:
+                    raise ValueError("Screenshot is empty")
+
+                img = enhance_image(screenshot)
+                img_np = np.array(img)
+                if img_np.size == 0:
+                    raise ValueError("Image is empty")
+
+                results = reader.readtext(img_np)
+                text = "\n".join([r[1] for r in results])
 
                 if hasattr(app, "float_text") and app.float_text.winfo_exists():
                     app.float_text.delete("1.0", "end")
-                    app.float_text.insert("1.0", result)
+                    app.float_text.insert("1.0", text or "❌ No text detected.")
             except Exception as e:
                 if hasattr(app, "float_text") and app.float_text.winfo_exists():
                     app.float_text.delete("1.0", "end")
-                    app.float_text.insert("1.0", f"❌ Error:\\n{e}")
-                break  # if an error occurs, exit the loop
-        time.sleep(3)
-
+                    app.float_text.insert("1.0", f"❌ Error:\n{e}")
+                break
+        time.sleep(4)
 
 def close_floating_ocr(app):
     app.float_ocr_active = False
