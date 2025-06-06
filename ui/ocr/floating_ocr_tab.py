@@ -120,7 +120,7 @@ def run_floating_ocr_loop(app):
                     app.float_text.delete("1.0", "end")
                     app.float_text.insert("1.0", f"❌ Error:\n{e}")
                 break
-        time.sleep(4)
+        time.sleep(2)
 
 def close_floating_ocr(app):
     app.float_ocr_active = False

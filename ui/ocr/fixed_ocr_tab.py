@@ -52,7 +52,7 @@ def run_ocr_loop(app):
             app.text_output.delete("0.0", "end")
             app.text_output.insert("0.0", f"❌ OCR Loop failed:\n{str(e)}")
             break
-        time.sleep(5)
+        time.sleep(2)
 
 def stop_ocr_loop(app):
     app.ocr_looping = False
