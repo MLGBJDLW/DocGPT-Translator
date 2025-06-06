@@ -1,0 +1,16 @@
+transformers
+torch
+sentencepiece
+python-docx
+PyMuPDF
+keyboard
+pyperclip
+openai
+openai>=1.0.0
+langdetect
+pyautogui
+pyperclip
+keyboard
+tk
+fastapi
+uvicorn
