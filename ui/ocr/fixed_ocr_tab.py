@@ -3,12 +3,15 @@ from tkinter import messagebox
 import threading
 import time
 from core.ocr_selector import capture_rectangle
-from core.ocr_handler import capture_and_ocr_translate_fixed
+from core.ocr_handler import capture_and_ocr_translate_fixed, capture_text_only
+from ui.subtitles_window import SubtitleWindow
+from ui.utils import ensure_tesseract_ready 
 from openai import OpenAI
 
 def build_fixed_ocr_tab(app):
     app.fixed_region = None
     app.ocr_looping = False
+    app.subtitles_window = None  # 初始化为空
 
     app.select_region_btn = ctk.CTkButton(app.tab_fixed, text="📌 Select Fixed Region", command=lambda: select_fixed_region(app))
     app.select_region_btn.pack(pady=(10, 5), fill="x", padx=40)
@@ -32,6 +35,8 @@ def select_fixed_region(app):
         messagebox.showerror("Selection Error", f"Failed to select region: {str(e)}")
 
 def start_ocr_loop(app):
+    if not ensure_tesseract_ready():
+        return
     if not app.api_key:
         messagebox.showerror("Missing API Key", "Please set your OpenAI API Key in Settings.")
         return
@@ -40,14 +45,48 @@ def start_ocr_loop(app):
         return
     app.client = OpenAI(api_key=app.api_key)
     app.ocr_looping = True
+    app.subtitles_window = SubtitleWindow()
+    app._last_ocr_text = ""
     threading.Thread(target=lambda: run_ocr_loop(app), daemon=True).start()
+    
+def clean_subtitle_output(text: str) -> str:
+    lines = text.strip().splitlines()
+    filtered = []
+    for line in lines:
+        if (
+            line.lower().startswith("[detected:")
+            or line.strip().lower().startswith("text:")
+            or "似乎是" in line
+            or "检测" in line
+            or "抱歉" in line
+        ):
+            continue
+        filtered.append(line.strip())
+    return "\n".join(filtered).strip()
 
 def run_ocr_loop(app):
     while app.ocr_looping:
         try:
+            # Only OCR if the region is set
+            raw_text = capture_text_only(app.fixed_region)
+            
+            if raw_text.strip() == app._last_ocr_text.strip():
+                time.sleep(2)
+                continue
+            app._last_ocr_text = raw_text
+            
+            # Perform OCR and translation
             result = capture_and_ocr_translate_fixed(app.client, app.fixed_region)
             app.text_output.delete("0.0", "end")
             app.text_output.insert("0.0", result)
+            
+            
+            if app.subtitles_window:
+                cleaned_result = clean_subtitle_output(result)
+                app.subtitles_window.update_text(cleaned_result)
+                break
+            time.sleep(2)
+                
         except Exception as e:
             app.text_output.delete("0.0", "end")
             app.text_output.insert("0.0", f"❌ OCR Loop failed:\n{str(e)}")
@@ -56,5 +95,8 @@ def run_ocr_loop(app):
 
 def stop_ocr_loop(app):
     app.ocr_looping = False
+    if app.subtitles_window:
+        app.subtitles_window.destroy()
+        app.subtitles_window = None
     app.text_output.delete("0.0", "end")
     app.text_output.insert("0.0", "OCR Loop stopped.")

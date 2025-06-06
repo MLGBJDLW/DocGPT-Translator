@@ -3,6 +3,8 @@ import pyautogui
 import numpy as np
 from core.ocr_selector import capture_rectangle
 from core.translator import translate_with_gpt, detect_source_lang
+import pytesseract
+from PIL import ImageGrab
 
 reader = easyocr.Reader(['en', 'ja'], gpu=False)
 
@@ -53,3 +55,8 @@ def capture_and_ocr_translate_fixed(client, region):
 
     return f"[Detected: {detected}]\n\n{translated}"
 
+def capture_text_only(region):
+    x, y, width, height = region
+    screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+    text = pytesseract.image_to_string(screenshot, lang='jpn+eng')
+    return text.strip()
