@@ -19,7 +19,7 @@ def launch_floating_ocr(app):
     app.float_win = tk.Toplevel(app)
     app.float_win.title("Floating OCR")
     app.float_win.geometry("400x200+300+300")
-    app.float_win.overrideredirect(True)
+    # app.float_win.overrideredirect(True)
     app.float_win.attributes("-topmost", True)
     app.float_win.configure(bg="#222222")
 
@@ -37,7 +37,7 @@ def launch_floating_ocr(app):
     app.float_text.focus_set()  # Set focus to the text widget
 
     close_button = tk.Button(
-        container,
+        container, 
         text="❌ Close",
         command=lambda: close_floating_ocr(app),
         bg="#444444",
@@ -73,18 +73,26 @@ def run_floating_ocr_loop(app):
     while getattr(app, "float_ocr_active", False):
         if not getattr(app, "float_paused", False):
             try:
+                if not (hasattr(app, "float_win") and app.float_win.winfo_exists()):
+                    break  # if the window is closed, exit the loop
+
                 x = app.float_win.winfo_rootx()
                 y = app.float_win.winfo_rooty()
                 w = app.float_win.winfo_width()
                 h = app.float_win.winfo_height()
                 region = (x, y, w, h)
                 result = capture_and_ocr_translate_fixed(app.client, region)
-                app.float_text.delete("1.0", "end")
-                app.float_text.insert("1.0", result)
+
+                if hasattr(app, "float_text") and app.float_text.winfo_exists():
+                    app.float_text.delete("1.0", "end")
+                    app.float_text.insert("1.0", result)
             except Exception as e:
-                app.float_text.delete("1.0", "end")
-                app.float_text.insert("1.0", f"❌ Error:\n{e}")
+                if hasattr(app, "float_text") and app.float_text.winfo_exists():
+                    app.float_text.delete("1.0", "end")
+                    app.float_text.insert("1.0", f"❌ Error:\\n{e}")
+                break  # if an error occurs, exit the loop
         time.sleep(3)
+
 
 def close_floating_ocr(app):
     app.float_ocr_active = False
