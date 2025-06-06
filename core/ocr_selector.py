@@ -26,11 +26,16 @@ def capture_rectangle():
         coords = canvas.coords(rect)
         root.quit()
         root.destroy()
+        
+    def on_close():
+        root.quit()
+        root.destroy()
 
     canvas.bind("<ButtonPress-1>", on_mouse_down)
     canvas.bind("<B1-Motion>", on_mouse_drag)
     canvas.bind("<ButtonRelease-1>", on_mouse_up)
+    root.bind("<Escape>", on_close)  # Allow closing with Escape key
     root.mainloop()
 
-    return coords
+    return list(map(int, coords)) if rect else None
 
