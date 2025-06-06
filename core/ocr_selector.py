@@ -27,7 +27,7 @@ def capture_rectangle():
         root.quit()
         root.destroy()
         
-    def on_close():
+    def on_close(event = None):
         root.quit()
         root.destroy()
 
