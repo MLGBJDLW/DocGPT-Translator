@@ -34,15 +34,18 @@ def detect_source_lang(text: str) -> str:
     except Exception:
         return "English"
 
-def translate_with_gpt(text: str, target_language: str, client: OpenAI) -> str:
+def translate_with_gpt(text: str, target_language: str, client: OpenAI, model: str = "gpt-3.5-turbo") -> str:
     if not hasattr(client, "chat") or not hasattr(client.chat, "completions"):
         raise ValueError("Provided client is not a valid OpenAI client. Make sure you passed OpenAI(api_key=...)")
 
-    prompt = f"Translate the following text into {target_language}:\n\n{text}"
+    prompt = f"""You are a helpful translation assistant. Please translate the following text into {target_language}.
+    
+Text:
+{text}"""
 
     try:
         response: ChatCompletion = client.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[
                 {"role": "system", "content": "You are a helpful translation assistant."},
                 {"role": "user", "content": prompt}

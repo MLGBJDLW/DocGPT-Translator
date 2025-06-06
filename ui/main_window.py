@@ -1,3 +1,5 @@
+# 修复并增强支持模型切换的 main_window.py
+# （在你原有的基础上保留 load_file，添加 model 字段处理和传参）
 import customtkinter as ctk
 from ui.tabs.text_translate_tab import build_text_tab
 from ui.ocr.fixed_ocr_tab import build_fixed_ocr_tab
@@ -16,7 +18,6 @@ import keyboard
 import pyautogui
 import pyperclip
 from openai import OpenAI
-from tkinter import messagebox
 
 SETTINGS_FILE = os.path.expanduser("~/.gpt_translator_settings.json")
 
@@ -31,6 +32,7 @@ class TranslatorApp(ctk.CTk):
         self.hotkey = "ctrl+shift+t"
         self.theme = "System"
         self.auto_detect = True
+        self.model = "gpt-3.5-turbo"
         self.last_used_language = "English"
         self.load_settings()
         ctk.set_appearance_mode(self.theme)
@@ -47,7 +49,7 @@ class TranslatorApp(ctk.CTk):
 
         self.tab_float = self.tabs.add("🧊 Floating OCR")
         build_floating_ocr_tab(self)
-        
+
         self.settings_button = ctk.CTkButton(self, text="⚙️ Settings", command=lambda: open_settings_window(self))
         self.settings_button.pack(pady=(0, 10), fill="x", padx=40)
 
@@ -65,10 +67,11 @@ class TranslatorApp(ctk.CTk):
                     self.theme = data.get("theme", "System")
                     self.auto_detect = data.get("auto_detect", True)
                     self.last_used_language = data.get("last_used_language", "English")
+                    self.model = data.get("model", "gpt-3.5-turbo")
             except Exception:
                 self.api_key = None
 
-    def save_settings(self, key, hotkey, theme, auto_detect, last_used_language):
+    def save_settings(self, key, hotkey, theme, auto_detect, last_used_language, model):
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
                 json.dump({
@@ -76,7 +79,8 @@ class TranslatorApp(ctk.CTk):
                     "hotkey": hotkey,
                     "theme": theme,
                     "auto_detect": auto_detect,
-                    "last_used_language": last_used_language
+                    "last_used_language": last_used_language,
+                    "model": model
                 }, f)
         except Exception:
             pass
@@ -109,14 +113,14 @@ class TranslatorApp(ctk.CTk):
         self.text_output.insert("0.0", "🔄 Translating, please wait...")
         self.update_idletasks()
         try:
-            translated = translate_with_gpt(raw_text, target_lang, self.client)
+            translated = translate_with_gpt(raw_text, target_lang, self.client, model=self.model)
             self.text_output.delete("0.0", "end")
             self.text_output.insert("0.0", translated)
             save_history({"source": raw_text, "translated": translated, "target_language": target_lang})
         except Exception as e:
             self.text_output.delete("0.0", "end")
             self.text_output.insert("0.0", f"❌ Translation failed:\n{str(e)}")
-            
+
     def load_file(self):
         path = filedialog.askopenfilename(filetypes=[('Document', "*.docx *.pdf")])
         if not path:
@@ -133,8 +137,6 @@ class TranslatorApp(ctk.CTk):
             self.text_input.insert("0.0", "\n".join(content))
         except Exception as e:
             messagebox.showerror("File Read Error", f"Failed to read file:\n{str(e)}")
-            return
-                                          
 
     def run_ocr_translate(self):
         if not self.api_key:
@@ -164,7 +166,7 @@ class TranslatorApp(ctk.CTk):
         self.label_detected.configure(text=f"Detected Language: {detected_lang}")
         target_lang = self.combo_lang.get()
         try:
-            translated = translate_with_gpt(text, target_lang, self.client)
+            translated = translate_with_gpt(text, target_lang, self.client, model=self.model)
             self.text_output.delete("0.0", "end")
             self.text_output.insert("0.0", translated)
         except Exception as e:

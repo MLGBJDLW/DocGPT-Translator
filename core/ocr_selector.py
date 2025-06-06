@@ -11,7 +11,7 @@ def capture_rectangle():
 
     rect = None
     start_x = start_y = 0
-    coords = [0, 0, 0, 0]  # Initialize with dummy values
+    coords = None  # Initialize with dummy values
 
     def on_mouse_down(event):
         nonlocal start_x, start_y, rect
@@ -28,6 +28,8 @@ def capture_rectangle():
         root.destroy()
         
     def on_close(event = None):
+        nonlocal coords
+        coords = None
         root.quit()
         root.destroy()
 
@@ -35,7 +37,8 @@ def capture_rectangle():
     canvas.bind("<B1-Motion>", on_mouse_drag)
     canvas.bind("<ButtonRelease-1>", on_mouse_up)
     root.bind("<Escape>", on_close)  # Allow closing with Escape key
+    root.protocol("WM_DELETE_WINDOW", on_close)
     root.mainloop()
 
-    return list(map(int, coords)) if rect else None
+    return coords if coords and len(coords) == 4 else None
 
