@@ -67,31 +67,43 @@ def clean_subtitle_output(text: str) -> str:
 def run_ocr_loop(app):
     while app.ocr_looping:
         try:
-            # Only OCR if the region is set
-            raw_text = capture_text_only(app.fixed_region)
-            
-            if raw_text.strip() == app._last_ocr_text.strip():
-                time.sleep(2)
+            raw_text = capture_text_only(app.fixed_region).strip()
+
+            # 🔒 排除空文本
+            if not raw_text:
+                print("[OCR] Empty result, skipping...")
+                time.sleep(0.5)
                 continue
+
+            # 🔁 跳过重复内容
+            if raw_text == app._last_ocr_text:
+                print("[OCR] Same as last result, skipping...")
+                time.sleep(0.5)
+                continue
+
+            # ✅ 内容变了，保存
             app._last_ocr_text = raw_text
-            
-            # Perform OCR and translation
+
+            # 🎯 执行翻译
             result = capture_and_ocr_translate_fixed(app.client, app.fixed_region)
+
+            # 更新文本区域
             app.text_output.delete("0.0", "end")
             app.text_output.insert("0.0", result)
-            
-            
+
+            # 更新字幕窗口
             if app.subtitles_window:
                 cleaned_result = clean_subtitle_output(result)
                 app.subtitles_window.update_text(cleaned_result)
-                break
-            time.sleep(2)
-                
+
         except Exception as e:
+            print("[OCR ERROR]", e)
             app.text_output.delete("0.0", "end")
             app.text_output.insert("0.0", f"❌ OCR Loop failed:\n{str(e)}")
             break
-        time.sleep(2)
+
+        time.sleep(0.5)
+
 
 def stop_ocr_loop(app):
     app.ocr_looping = False

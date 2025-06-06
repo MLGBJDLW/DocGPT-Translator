@@ -14,3 +14,7 @@ keyboard
 tk
 fastapi
 uvicorn
+customtkinter
+pytesseract
+Pillow
+pywin32
