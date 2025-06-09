@@ -5,11 +5,30 @@ import numpy as np
 from core.ocr_selector import capture_rectangle
 from core.translator import translate_with_gpt, detect_source_lang
 
-# 初始化 EasyOCR（支持 GPU 可改为 gpu=True）
-reader = easyocr.Reader(['en', 'ja'], gpu=torch.cuda.is_available())
+# Default language for OCR
+DEFAULT_LANGS = ['ch_sim', 'en']
+
+def get_easyocr_reader(langs=None):
+    langs = langs or DEFAULT_LANGS
+    if any(l in langs for l in ['ch_sim', 'ch_tra', 'ja', 'ko']):
+        return easyocr.Reader(['en'] + [l for l in langs if l in ['ch_sim', 'ch_tra', 'ja', 'ko']], gpu=torch.cuda.is_available())
+    else:
+        return easyocr.Reader(langs, gpu=torch.cuda.is_available())
+    
+# 公共处理函数：OCR + 拼接
+def process_ocr(img_np, langs=None):
+    reader = get_easyocr_reader(langs)
+    results = reader.readtext(img_np, detail=0)
+
+    if isinstance(results[0], str):
+        joined_text = "\n".join(results)
+    else:
+        joined_text = "\n".join([text for _, text, _ in results])
+
+    return joined_text.strip()
 
 # 捕捉手动区域，OCR + 翻译
-def capture_and_ocr_translate(client):
+def capture_and_ocr_translate(client, langs=None):
     bbox = capture_rectangle()
     if not bbox or len(bbox) != 4:
         return "❌ Failed to get region."
@@ -19,10 +38,9 @@ def capture_and_ocr_translate(client):
     screenshot = pyautogui.screenshot(region=region)
     img_np = np.array(screenshot)
 
-    results = reader.readtext(img_np, detail=0)
-    joined_text = "\n".join(results)
+    joined_text = process_ocr(img_np, langs)
 
-    if not joined_text.strip():
+    if not joined_text:
         return "❌ No text detected."
 
     detected = detect_source_lang(joined_text)
@@ -31,17 +49,16 @@ def capture_and_ocr_translate(client):
     return f"[Detected: {detected}]\n\n{translated}"
 
 # 使用固定区域进行 OCR + 翻译
-def capture_and_ocr_translate_fixed(client, region):
+def capture_and_ocr_translate_fixed(client, region, langs=None):
     if not region or len(region) != 4:
         return "❌ Invalid fixed region."
 
     screenshot = pyautogui.screenshot(region=region)
     img_np = np.array(screenshot)
 
-    results = reader.readtext(img_np, detail=0)
-    joined_text = "\n".join(results)
+    joined_text = process_ocr(img_np, langs)
 
-    if not joined_text.strip():
+    if not joined_text:
         return "❌ No text detected in fixed region."
 
     detected = detect_source_lang(joined_text)
@@ -50,11 +67,7 @@ def capture_and_ocr_translate_fixed(client, region):
     return f"[Detected: {detected}]\n\n{translated}"
 
 # 仅识别文本（不翻译），用于比对判断内容变化
-def capture_text_only(region):
-    x, y, width, height = region
+def capture_text_only(region, langs=None):
     screenshot = pyautogui.screenshot(region=region)
     img_np = np.array(screenshot)
-
-    results = reader.readtext(img_np, detail=0)
-    joined_text = "\n".join(results)
-    return joined_text.strip()
+    return process_ocr(img_np, langs)

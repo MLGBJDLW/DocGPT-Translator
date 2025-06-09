@@ -2,12 +2,15 @@ import tkinter as tk
 import time
 import threading
 from openai import OpenAI
-from core.ocr_handler import reader
+from core.ocr_handler import get_easyocr_reader
 import customtkinter as ctk
 from tkinter import messagebox
 from PIL import Image, ImageOps
 import numpy as np
 import mss
+
+# Initialize EasyOCR reader globally
+reader = get_easyocr_reader()
 
 def build_floating_ocr_tab(app):
     app.float_ocr_btn = ctk.CTkButton(app.tab_float, text="🧊 Launch Floating Translate Box", command=lambda: launch_floating_ocr(app))
