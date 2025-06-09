@@ -10,9 +10,10 @@ class SubtitleWindow:
 
         self.root.configure(bg="black")
 
+        # 字幕 Label：横向显示，不换行，左对齐
         self.label = tk.Label(
             self.root, text="", font=("Microsoft YaHei", 18),
-            fg="white", bg="black", wraplength=800, justify="left", anchor="nw"
+            fg="white", bg="black", wraplength=0, justify="left", anchor="w"
         )
         self.label.pack(expand=True, fill="both", padx=10, pady=10)
 
@@ -21,7 +22,7 @@ class SubtitleWindow:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x = (screen_width - width) // 2
-        y = screen_height - height - 100
+        y = screen_height - height - 60  # 距离底部60像素
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
         # 支持调整大小
@@ -41,7 +42,8 @@ class SubtitleWindow:
         self.root.geometry(f"+{x}+{y}")
 
     def update_text(self, text):
-        self.label.config(text=text)
+        single_line = " ".join(text.strip().splitlines())  # ❗ 合并多行
+        self.label.config(text=single_line)
         self.root.update()
 
     def destroy(self):

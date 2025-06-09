@@ -109,3 +109,7 @@ def stop_ocr_loop(app):
         app.subtitles_window = None
     app.text_output.delete("0.0", "end")
     app.text_output.insert("0.0", "OCR Loop stopped.")
+
+__all__ = [
+    "build_fixed_ocr_tab",
+    'stop_ocr_loop']
