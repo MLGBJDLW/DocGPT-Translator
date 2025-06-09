@@ -2,7 +2,7 @@
 # （在你原有的基础上保留 load_file，添加 model 字段处理和传参）
 import customtkinter as ctk
 from ui.tabs.text_translate_tab import build_text_tab
-from ui.ocr.fixed_ocr_tab import build_fixed_ocr_tab
+from ui.ocr.fixed_ocr_tab import build_fixed_ocr_tab, stop_ocr_loop
 from ui.ocr.floating_ocr_tab import build_floating_ocr_tab
 from ui.settings_window import open_settings_window
 from ui.tray_icon import create_tray_icon
@@ -54,7 +54,7 @@ class TranslatorApp(ctk.CTk):
         self.settings_button.pack(pady=(0, 10), fill="x", padx=40)
 
         threading.Thread(target=self.register_hotkey_listener, daemon=True).start()
-        self.protocol("WM_DELETE_WINDOW", self.hide_to_tray)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         create_tray_icon(self)
 
     def load_settings(self):
@@ -151,7 +151,18 @@ class TranslatorApp(ctk.CTk):
         except Exception as e:
             self.text_output.delete("0.0", "end")
             self.text_output.insert("0.0", f"❌ OCR Translation failed:\n{str(e)}")
+            
 
+    def on_close(self):
+        try:
+            stop_ocr_loop(self)
+            print("[App] OCR loop stopped from on_close")
+        except Exception as e:
+            print("[App] Failed to stop OCR loop:", e)
+
+        self.destroy()  # 或 self.withdraw()，建议退出时用 destroy
+        
+    
     def hotkey_translate(self):
         if not self.api_key:
             return
