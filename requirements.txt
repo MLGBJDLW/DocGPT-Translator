@@ -15,6 +15,7 @@ tk
 fastapi
 uvicorn
 customtkinter
-pytesseract
-Pillow
-pywin32
+easyocr
+opencv-python-headless
+numpy
+pyautogui

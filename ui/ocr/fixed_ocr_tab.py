@@ -5,7 +5,6 @@ import time
 from core.ocr_selector import capture_rectangle
 from core.ocr_handler import capture_and_ocr_translate_fixed, capture_text_only
 from ui.subtitles_window import SubtitleWindow
-from ui.utils import ensure_tesseract_ready 
 from openai import OpenAI
 
 def build_fixed_ocr_tab(app):
@@ -35,8 +34,6 @@ def select_fixed_region(app):
         messagebox.showerror("Selection Error", f"Failed to select region: {str(e)}")
 
 def start_ocr_loop(app):
-    if not ensure_tesseract_ready():
-        return
     if not app.api_key:
         messagebox.showerror("Missing API Key", "Please set your OpenAI API Key in Settings.")
         return
