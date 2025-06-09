@@ -47,6 +47,8 @@ python main.py
 │   ├── ocr_selector.py
 │   └── translator.py
 ├── ui/
+│   |  ├── ocr/
+│   |  ├── tabs/
 │   ├── translator_gui.py
 │   ├── settings_ui.py
 │   └── tray_icon.py
