@@ -1,14 +1,14 @@
 import easyocr
 import pyautogui
+import torch
 import numpy as np
 from core.ocr_selector import capture_rectangle
 from core.translator import translate_with_gpt, detect_source_lang
-import pytesseract
-from PIL import ImageGrab
 
-reader = easyocr.Reader(['en', 'ja'], gpu=False)
+# 初始化 EasyOCR（支持 GPU 可改为 gpu=True）
+reader = easyocr.Reader(['en', 'ja'], gpu=torch.cuda.is_available())
 
-# Capture a region of the screen, perform OCR, and translate the text
+# 捕捉手动区域，OCR + 翻译
 def capture_and_ocr_translate(client):
     bbox = capture_rectangle()
     if not bbox or len(bbox) != 4:
@@ -19,9 +19,8 @@ def capture_and_ocr_translate(client):
     screenshot = pyautogui.screenshot(region=region)
     img_np = np.array(screenshot)
 
-    results = reader.readtext(img_np)
-    texts = [text[1] for text in results]
-    joined_text = "\n".join(texts)
+    results = reader.readtext(img_np, detail=0)
+    joined_text = "\n".join(results)
 
     if not joined_text.strip():
         return "❌ No text detected."
@@ -31,21 +30,16 @@ def capture_and_ocr_translate(client):
 
     return f"[Detected: {detected}]\n\n{translated}"
 
-# Capture and OCR + Translate with fixed region
+# 使用固定区域进行 OCR + 翻译
 def capture_and_ocr_translate_fixed(client, region):
-    """
-    使用给定区域进行 OCR + 翻译
-    region: (x, y, width, height)
-    """
     if not region or len(region) != 4:
         return "❌ Invalid fixed region."
 
     screenshot = pyautogui.screenshot(region=region)
     img_np = np.array(screenshot)
 
-    results = reader.readtext(img_np)
-    texts = [text[1] for text in results]
-    joined_text = "\n".join(texts)
+    results = reader.readtext(img_np, detail=0)
+    joined_text = "\n".join(results)
 
     if not joined_text.strip():
         return "❌ No text detected in fixed region."
@@ -55,8 +49,12 @@ def capture_and_ocr_translate_fixed(client, region):
 
     return f"[Detected: {detected}]\n\n{translated}"
 
+# 仅识别文本（不翻译），用于比对判断内容变化
 def capture_text_only(region):
     x, y, width, height = region
-    screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
-    text = pytesseract.image_to_string(screenshot, lang='jpn+eng')
-    return text.strip()
+    screenshot = pyautogui.screenshot(region=region)
+    img_np = np.array(screenshot)
+
+    results = reader.readtext(img_np, detail=0)
+    joined_text = "\n".join(results)
+    return joined_text.strip()
